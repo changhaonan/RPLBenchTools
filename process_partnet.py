@@ -23,7 +23,7 @@ from lgmcts.object_primitives import (
 from lgmcts.geometry_utils import create_textured_cuboid, resize_textured_obj
 
 ###################### Constants ###################################
-HANDLE_MIN_DEPTH = 0.08
+HANDLE_MIN_DEPTH = 0.12
 HANDLE_MAX_WIDTH = 0.04
 HANDLE_WH_RATIO = 5.0
 
@@ -151,9 +151,9 @@ def replace_handle(export_dir, urdf, raw_urdf_file):
             link_bounds = link_mesh_whole.bounds
             link_center = link_mesh_whole.centroid
 
-            # [DEBUG]
-            scene = trimesh.scene.scene.Scene(geometry=[handle_mesh_whole, link_mesh_whole])
-            scene.show()
+            # # [DEBUG]
+            # scene = trimesh.scene.scene.Scene(geometry=[handle_mesh_whole, link_mesh_whole])
+            # scene.show()
             # For the scale_xy, there are two constraints:
             # 1. We want to make the handle width to be HANDLE_MAX_WIDTH if possible
             # 2. We don't want to make the handle's bounds exceed the link's bounds
@@ -162,16 +162,16 @@ def replace_handle(export_dir, urdf, raw_urdf_file):
             # width is the shorted edge
             handle_extent = handle_bounds[1, :2] - handle_bounds[0, :2]
             link_extent = link_bounds[1, :2] - link_bounds[0, :2]
-            long_axis = np.argmax(link_extent)
+            long_axis = np.argmax(handle_extent)
             if long_axis == 0:
                 # x-axis long
-                _scale_x = min(HANDLE_MAX_WIDTH * HANDLE_WH_RATIO / (handle_extent[0] + 1e-6), _scale_xy_max[0])
                 _scale_y = min(HANDLE_MAX_WIDTH / (handle_extent[1] + 1e-6), _scale_xy_max[1])
+                _scale_x = min(_scale_y, _scale_xy_max[0])
             else:
                 # y-axis long
                 _scale_x = min(HANDLE_MAX_WIDTH / (handle_extent[0] + 1e-6), _scale_xy_max[0])
-                _scale_y = min(HANDLE_MAX_WIDTH * HANDLE_WH_RATIO / (handle_extent[1] + 1e-6), _scale_xy_max[1])
-            # _scale_xy = 1.0
+                _scale_y = min(_scale_x, _scale_xy_max[1])
+            _scale_x, _scale_y = min(_scale_x, _scale_y), min(_scale_x, _scale_y)
             # max Z-value after scaling
             _scale_z = max(HANDLE_MIN_DEPTH / (handle_bounds[1, 2] - handle_bounds[0, 2] + 1e-6), 1.0)
             max_z = (handle_bounds[1, 2] - handle_bounds[0, 2]) * _scale_z + handle_bounds[0, 2]
@@ -228,9 +228,9 @@ def replace_handle(export_dir, urdf, raw_urdf_file):
                 replaced_results.append([handle_mesh_file, handle_vis_file, handle_collision_file])
 
                 ###################### Load existing mesh ########################
-                # [DEBUG]
-                scene = trimesh.scene.scene.Scene(geometry=[handle_mesh, link_mesh_whole])
-                scene.show()
+                # # [DEBUG]
+                # scene = trimesh.scene.scene.Scene(geometry=[handle_mesh, link_mesh_whole])
+                # scene.show()
 
     # Replace the handle mesh in the URDF file
     urdf_tree = ET.parse(raw_urdf_file)
@@ -470,9 +470,9 @@ if __name__ == "__main__":
                     # )
                     ############################## Load template handle ##############################
                     handle_mesh = resize_textured_obj(handle.extent, HANDLE_TEMPLATES[rng.randint(len(HANDLE_TEMPLATES))])
-                    # [DEBUG]
-                    scene = trimesh.scene.scene.Scene(geometry=[handle_mesh])
-                    scene.show()
+                    # # [DEBUG]
+                    # scene = trimesh.scene.scene.Scene(geometry=[handle_mesh])
+                    # scene.show()
                     # NOTICE: here the origin of the real link is at the joint
                     # This is the tf2parent w.r.t to the center of the link
                     # We need to convert it to w.r.t to the origin of the link

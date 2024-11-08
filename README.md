@@ -35,3 +35,4 @@ If will show `Structure` and `Pyrender` sequentially. Press `Q` to switch.
 2. Create `12349`.
 3. Objects such as `27267` has a bug.
 4. `34178` has a bug, for object that is not initialized at `0`. All has a bug.
+5. `12071` has object that has shape 0.
