@@ -33,28 +33,25 @@ HANDLE_TEMPLATES = [f"{CUR_DIR}/resources/handles/type_1/original-45.obj"]
 
 ###################### Utils ###################################
 def replace_obj_files_in_urdf(urdf_root, target_obj, visual_obj, collision_obj):
-    # # Parse the URDF file
-    # tree = ET.parse(urdf_file)
-    # root = tree.getroot()
-
-    # Loop through all 'visual' tags and replace the mesh file if it matches the target obj
-    for visual in urdf_root.findall(".//visual"):
-        mesh = visual.find(".//mesh")
-        if mesh is not None:
-            filename = mesh.get("filename")
-            if filename and target_obj in filename:
-                mesh.set("filename", visual_obj)  # Replace the file for visual tag
-
-    # Loop through all 'collision' tags and replace the mesh file if it matches the target obj
-    for collision in urdf_root.findall(".//collision"):
-        mesh = collision.find(".//mesh")
-        if mesh is not None:
-            filename = mesh.get("filename")
-            if filename and target_obj in filename:
-                mesh.set("filename", collision_obj)  # Replace the file for collision tag
-
-    # # Write the modified URDF to a new file
-    # tree.write(output_file)
+    for link in urdf_root.findall(".//link"):
+        for visual in link.findall(".//visual"):
+            mesh = visual.find(".//mesh")
+            if mesh is not None:
+                filename = mesh.get("filename")
+                if filename and target_obj in filename:
+                    if visual_obj:
+                        mesh.set("filename", visual_obj)  # Replace the file for visual tag
+                    else:
+                        link.remove(visual)
+        for collision in link.findall(".//collision"):
+            mesh = collision.find(".//mesh")
+            if mesh is not None:
+                filename = mesh.get("filename")
+                if filename and target_obj in filename:
+                    if collision_obj:
+                        mesh.set("filename", collision_obj)  # Replace the file for collision tag
+                    else:
+                        link.remove(collision)
 
 
 def add_meshes_to_link(urdf_file, link_names, mesh_names, mesh_files, texture_files, pose_xyzs, pose_rpys):
@@ -163,6 +160,8 @@ def replace_handle(export_dir, urdf, raw_urdf_file):
             handle_extent = handle_bounds[1, :2] - handle_bounds[0, :2]
             link_extent = link_bounds[1, :2] - link_bounds[0, :2]
             long_axis = np.argmax(handle_extent)
+            if np.min(handle_extent) < 1e-6:
+                ill_handle = True
             if long_axis == 0:
                 # x-axis long
                 _scale_y = min(HANDLE_MAX_WIDTH / (handle_extent[1] + 1e-6), _scale_xy_max[1])
@@ -225,7 +224,10 @@ def replace_handle(export_dir, urdf, raw_urdf_file):
                 os.makedirs(os.path.join(export_dir, "textured_objs", f"{handle_mesh_name}_collision"), exist_ok=True)
                 handle_collision_file = os.path.join("textured_objs", f"{handle_mesh_name}_collision", f"{handle_mesh_name}_collision.obj")
                 bbox_mesh.export(os.path.join(export_dir, handle_collision_file))
-                replaced_results.append([handle_mesh_file, handle_vis_file, handle_collision_file])
+                if not ill_handle:
+                    replaced_results.append([handle_mesh_file, handle_vis_file, handle_collision_file])
+                else:
+                    replaced_results.append([handle_mesh_file, None, None])
 
                 ###################### Load existing mesh ########################
                 # # [DEBUG]
