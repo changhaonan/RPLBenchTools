@@ -1,0 +1,12 @@
+*.pyc
+
+raw_data/*
+raw_data/dataset/*
+dataset/*
+*.zip
+partnet-mobility-v0.zip
+
+assets/art_urdf/*
+assets/art_templates/*
+
+.vscode/*
