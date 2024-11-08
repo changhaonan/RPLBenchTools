@@ -527,6 +527,7 @@ class Handle(Space):
         Args:
             offset: the offset for the grasp pose.
             grasp_strategy: top, side.
+            bias: the bias for the grasp pose. negative for left, positive for right.
         Note: Accurately speaking, side is not a type of grasp, but use for pushing.
         """
         grasp_pose_local = np.eye(4)
@@ -859,6 +860,10 @@ class Joint(LevelObject):
             self.joint_value = self.limits[0] + value * (self.limits[1] - self.limits[0])
         self._update_pose()
 
+    def get_axis(self):
+        """Get the dir & origin of the axis in world frame."""
+        return self.tf[:3, :3] @ self.axis_local, self.tf[:3, 3]
+
     def _update_pose(self):
         if self.joint_type == "revolute":
             self.tf_local[:3, :3] = np.eye(3)
@@ -945,7 +950,7 @@ class ArtObject(Link):
                 self.spaces[space_name] = space  # Reference to space
         if handles is not None:
             for _idx, handle in enumerate(handles):
-                handle_name = handle.name if handle.name != "" else f"{name}_handle_{_idx}"
+                handle_name = handle.name if (handle.name != "handle" and handle.name != "") else f"{name}_handle_{_idx}"
                 self.handles[handle_name] = handle
         return self.links[name]
 
@@ -1591,6 +1596,12 @@ def load_space_from_config(config, scale=1.0):
     }
 
 
+def load_handle_from_config(config, scale=1.0):
+    handle_dict = load_space_from_config(config, scale=scale)
+    handle_dict["name"] = config.get("name", "handle")
+    return handle_dict
+
+
 def load_link_from_config(config, scale=1.0):
     link_name = config["name"]
     tf6d = np.array(config.get("tf", [0, 0, 0, 0, 0, 0]))
@@ -1612,7 +1623,7 @@ def load_link_from_config(config, scale=1.0):
         spaces = None
     # Add handles
     if "handles" in config:
-        handles = [Handle(**load_space_from_config(h, scale=scale)) for h in config["handles"]]
+        handles = [Handle(**load_handle_from_config(h, scale=scale)) for h in config["handles"]]
     else:
         handles = None
     # Add info

@@ -162,6 +162,8 @@ def replace_handle(export_dir, urdf, raw_urdf_file):
             long_axis = np.argmax(handle_extent)
             if np.min(handle_extent) < 1e-6:
                 ill_handle = True
+            else:
+                ill_handle = False
             if long_axis == 0:
                 # x-axis long
                 _scale_y = min(HANDLE_MAX_WIDTH / (handle_extent[1] + 1e-6), _scale_xy_max[1])

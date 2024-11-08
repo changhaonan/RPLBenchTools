@@ -49,13 +49,39 @@ def visualize_all_arts(template_dir, urdf_dir, joint_values, is_robot=False, id=
         o3d.visualization.draw_geometries(vis)
 
         robot = URDF.load(os.path.join(urdf_dir, art_obj.info["urdf_file"]))
-        # # Set joint values
-        # if is_robot:
-        #     robot.set_joint_values(art_obj.get_joint_values(is_rel=True))
-        #     robot.show()
         joint_cfg = art_obj.get_joint_values(is_rel=False, return_dict=True)
         joint_cfg = {art_obj.joints[j].info["raw_name"]: joint_cfg[j] for j in art_obj.active_joints}
-        robot.show(cfg=joint_cfg, use_collision=False)
+        robot.show(cfg=joint_cfg, use_collision=True)
+
+        # Articulation information
+        # 0. Set joint values
+        joint_values = [0.0] * num_active_joints
+        art_obj.set_joint_values(joint_values, is_rel=True)
+        # 1. Joint Info
+        print(f"Active joints: {art_obj.active_joints}")
+        for joint in art_obj.active_joints:
+            dir, origin = art_obj.joints[joint].get_axis()
+            print(f"Joint {joint} Axis: {dir} | Origin: {origin}")
+        # 2. Link Info
+        for link in art_obj.links.values():
+            bbox = link.get_bbox()
+            bbox_pos, bbox_rotvec, bbox_scale = bbox[:3], bbox[3:6], bbox[6:]
+            print(f"Link {link.name} BBox: {bbox_pos} | {bbox_rotvec} | {bbox_scale}")
+        # 3. Handle Info
+        for handle in art_obj.handles.values():
+            handle_pos, handle_rotvec, handle_scale = handle.get_bbox()
+            print(f"Handle {handle.name} BBox: {handle_pos} | {handle_rotvec} | {handle_scale}")
+            # 3.1. We can also get grasp pose
+            grasp_pose = handle.get_grasp_poses(offset=0.1, bias=0.1)
+            print(f"Handle {handle.name} Grasp Pose: {grasp_pose}")
+        # 4. Manipulate joint trajectory
+        manip_traj = art_obj.get_manip_traj(joint_idx=0, goal_joint_value=1.0, num_waypoints=10)[0]
+        vis_o3d = art_obj.get_vis_o3d(show_joint=True)
+        for pose in manip_traj:
+            coord = o3d.geometry.TriangleMesh.create_coordinate_frame(size=0.1)
+            coord.transform(pose)
+            vis_o3d.append(coord)
+        o3d.visualization.draw_geometries(vis_o3d)
 
 
 def visualie_rigid_obj(obj_file):
@@ -78,8 +104,8 @@ if __name__ == "__main__":
     parser.add_argument("--template_dir", type=str, default="art_templates")
     parser.add_argument("--urdf_dir", type=str, default="art_urdf")
     parser.add_argument("--is_robot", action="store_true")
-    parser.add_argument("--joint_values", type=str, default="0.0")
-    parser.add_argument("--id", type=int, default=12428)
+    parser.add_argument("--joint_values", type=str, default="0.5")
+    parser.add_argument("--id", type=int, default=12578)
     args = parser.parse_args()
 
     is_robot = args.is_robot
